@@ -21,7 +21,10 @@
 		"vscode": {
 			"settings": {
 				"dev.containers.copyGitConfig": true
-			}
+			},
+			"extensions": [
+				"GitHub.copilot"
+			]
 		}
 	},
 	"features": {
