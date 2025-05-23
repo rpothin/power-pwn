@@ -31,6 +31,65 @@ check_prerequisites() {
     fi
     echo "---"
 
+    # Check Python, Pip, Pandas, and Openpyxl
+    local python_ok=true
+    if command -v python3 &> /dev/null && command -v pip3 &> /dev/null; then
+        echo "✓ Python 3 and Pip 3 are installed"
+        
+        # Check for pandas
+        if python3 -c "import pandas" &> /dev/null; then
+            echo "✓ pandas is installed"
+        else
+            echo "✗ pandas not found."
+            read -p "Attempt to install pandas now? (y/N): " -n 1 -r REPLY; echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo "Installing pandas..."
+                if pip3 install pandas; then
+                    echo "✓ pandas installed successfully."
+                else
+                    echo "✗ pandas installation failed. Please try manually (pip3 install pandas)."
+                    python_ok=false
+                    all_good_overall=false
+                fi
+            else
+                echo "Skipping pandas installation. Please install manually."
+                python_ok=false
+                all_good_overall=false
+            fi
+        fi
+
+        # Check for openpyxl (needed by pandas to read/write Excel files)
+        if python3 -c "import openpyxl" &> /dev/null; then
+            echo "✓ openpyxl is installed"
+        else
+            echo "✗ openpyxl not found (required by pandas for Excel)."
+            read -p "Attempt to install openpyxl now? (y/N): " -n 1 -r REPLY; echo
+            if [[ $REPLY =~ ^[Yy]$ ]]; then
+                echo "Installing openpyxl..."
+                if pip3 install openpyxl; then
+                    echo "✓ openpyxl installed successfully."
+                else
+                    echo "✗ openpyxl installation failed. Please try manually (pip3 install openpyxl)."
+                    python_ok=false
+                    all_good_overall=false
+                fi
+            else
+                echo "Skipping openpyxl installation. Please install manually."
+                python_ok=false
+                all_good_overall=false
+            fi
+        fi
+    else
+        echo "✗ Python 3 and/or Pip 3 not found."
+        echo "  Please install Python 3 and Pip 3. For Debian/Ubuntu: sudo apt-get update && sudo apt-get install -y python3 python3-pip"
+        python_ok=false
+        all_good_overall=false
+    fi
+    if [ "$python_ok" = false ]; then
+        echo "! The xlsx_to_json.py script may not function without Python, Pip, pandas, and openpyxl."
+    fi
+    echo "---"
+
     # Check Node.js & NPM
     if command -v node &> /dev/null && command -v npm &> /dev/null; then
         echo "✓ Node.js and NPM are installed"

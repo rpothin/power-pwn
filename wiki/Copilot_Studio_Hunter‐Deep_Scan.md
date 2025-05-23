@@ -70,6 +70,37 @@ powerpwn copilot-studio-hunter deep-scan -i "11111111-1111-1111-1111-11111111111
 | timeout_prefix   | 300-600            | Prefix scan timeout (seconds)              |
 | timeout_bots     | 300-900            | Bot scan timeout (seconds)                 |
 
+### Output exploitation
+
+Once the `deep-scan` module completes, it generates an XLSX file (e.g., `YOUR_DOMAIN_OR_TENANT_ID_YYYY_MM_DD.xlsx`) in the `src/powerpwn/copilot_studio/final_results/` directory.
+
+To convert this XLSX file to a JSON format for easier programmatic access or integration with other tools, you can use the provided `xlsx_to_json.py` script.
+
+1.  **Ensure Python and Pandas are installed:**
+    If you haven't already, you might need to install pandas and its dependency for reading Excel files:
+    ```bash
+    pip install pandas openpyxl
+    ```
+    This step is also covered in the `check_prereqs.sh` script.
+
+2.  **Run the conversion script:**
+    Execute the script, providing the path to your input XLSX file. The JSON output will be saved in the same directory as the input file.
+    ```bash
+    python /workspaces/power-pwn/xlsx_to_json.py /workspaces/power-pwn/src/powerpwn/copilot_studio/final_results/YOUR_DOMAIN_OR_TENANT_ID_YYYY_MM_DD.xlsx
+    ```
+    Replace `YOUR_DOMAIN_OR_TENANT_ID_YYYY_MM_DD.xlsx` with the actual name of your generated Excel file.
+
+    For example:
+    ```bash
+    python /workspaces/power-pwn/xlsx_to_json.py /workspaces/power-pwn/src/powerpwn/copilot_studio/final_results/rpothinmvp.onmicrosoft.com_2025_05_23.xlsx
+    ```
+    This will create a `rpothinmvp.onmicrosoft.com_2025_05_23.json` file in the `/workspaces/power-pwn/src/powerpwn/copilot_studio/final_results/` directory.
+
+    You can also optionally specify a different output path for the JSON file:
+    ```bash
+    python /workspaces/power-pwn/xlsx_to_json.py /path/to/your/input.xlsx /path/to/your/output.json
+    ```
+
 ### Security and Ethical Considerations
 
 ⚠️ Only scan systems you own or have permission to test.
