@@ -1,3 +1,6 @@
+ContosoShoppingAssistant
+Shopping
+Assistant
 Copilot
 Test
 Demo

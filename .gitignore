@@ -154,3 +154,7 @@ whoami_*
 copilot_dump_*
 ffuf*
 amass*
+
+# Power-pwn specific
+src/powerpwn/copilot_studio/final_results/
+src/powerpwn/copilot_studio/internal_results/

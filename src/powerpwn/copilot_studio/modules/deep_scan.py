@@ -365,7 +365,7 @@ def get_ffuf_results_prefix(endpoint: str, wordlist_prefix: str, wordlist_suffix
         f"{endpoint}FUZZ1_FUZZ2/canvassettings?api-version=2022-03-01-preview",
         "-fr",
         '"demoWebsiteErrorCode": "404"',
-        "-ac",
+        # "-ac", # Temporarily removed for debugging to rule out autocalibration issues
         "-rate",
         str(rate_limit),
         "-t",
@@ -395,25 +395,62 @@ def get_ffuf_results_prefix(endpoint: str, wordlist_prefix: str, wordlist_suffix
         "Sec-Fetch-Site: cross-site",
         "-H",
         "Sec-GPC: 1",
-        "-H",
-        "Via: 1.1 103.230.38.175",
+        # "-H", "Via: 1.1 103.230.38.175", # Temporarily removed as it might cause issues
         "-H",
         "TE: trailers",
     ]
 
-    # TODO: Verify and improve guardrails for using subprocess
-    popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True)  # nosec
+    logging.debug(f"Running FFUF command for prefix scan: {' '.join(command)}")
+    # Ensure universal_newlines=True (or text=True) for string output
+    popen = subprocess.Popen(command, stdout=subprocess.PIPE, universal_newlines=True, text=True)
+    
+    fuzz1_value_found = None
+
     for stdout_line in iter(popen.stdout.readline, ""):
-        if "FUZZ1:" in stdout_line:
-            fuzz1_value = stdout_line.split("FUZZ1:")[1].split()[0]
-            popen.send_signal(signal.SIGTERM)  # Send SIGTERM to ask ffuf to terminate gracefully
-            yield fuzz1_value, popen
-            break
-        yield None, popen
-    popen.stdout.close()
-    return_code = popen.wait()
-    if return_code:
+        # logging.debug(f"FFUF_PREFIX_STDOUT: {stdout_line.strip()}") # Removed for less verbosity
+
+        # Try to match lines like "[INFO]    * FUZZ1: value" or general "FUZZ1: value"
+        # FFUF's verbose output can vary, this tries to catch common formats for keyword values.
+        match = re.search(r"FUZZ1:\s*(\S+)", stdout_line) # General match
+        if not match: # Fallback for specific FFUF verbose format like "* FUZZ1: value"
+             match = re.search(r"^\s*\*\s*FUZZ1:\s*(\S+)", stdout_line)
+
+        if match:
+            fuzz1_value = match.group(1).strip(',') # Strip potential trailing comma from FFUF output
+            logging.info(f"Found potential solution prefix by FFUF: {fuzz1_value} from line: {stdout_line.strip()}")
+            
+            fuzz1_value_found = fuzz1_value # Mark that we found it
+
+            # Terminate FFUF as we found what we needed for the prefix scan
+            try:
+                popen.terminate() # Sends SIGTERM, preferred over popen.kill() initially
+            except ProcessLookupError: # pragma: no cover
+                # This can happen if the process already terminated between the read and terminate call
+                pass 
+            
+            yield fuzz1_value, popen # Yield the found value and the popen object
+            break  # Exit loop as we found the prefix
+        else:
+            # Yield None and the popen object for lines that don't match FUZZ1
+            # This allows the caller to process/log all FFUF output (e.g., for progress indicators)
+            yield None, popen
+            
+    # After the loop (either by break due to finding a prefix, or FFUF completing its wordlist)
+    if popen.stdout:
+        popen.stdout.close() # Ensure stdout is closed
+    
+    return_code = popen.wait() # Wait for the process to fully terminate and get its exit code
+
+    if fuzz1_value_found:
+        # If we found a prefix, FFUF was terminated by us.
+        # A non-zero return_code (e.g., -15 for SIGTERM on Linux) is expected. This is not an error.
+        logging.debug(f"FFUF process for prefix scan terminated with code {return_code} after finding prefix '{fuzz1_value_found}'. This is expected.")
+    elif return_code != 0:
+        # If no prefix was found AND FFUF exited with a non-zero code, it indicates an actual FFUF error.
+        logging.error(f"FFUF process for prefix scan exited with error code {return_code} and no prefix was found. Command: {' '.join(command)}")
         raise subprocess.CalledProcessError(return_code, command)
+    # If fuzz1_value_found is None and return_code is 0, FFUF completed its scan without finding the prefix and without any FFUF error.
+    # In this case, the generator simply stops yielding, which is the correct behavior.
 
 
 def print_brand(tenant: str, timeout: int = 10):

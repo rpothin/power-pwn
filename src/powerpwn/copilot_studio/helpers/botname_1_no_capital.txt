@@ -1,3 +1,7 @@
+contososhoppingassistant
+contoso
+shopping
+assistant
 copilot
 test
 demo
